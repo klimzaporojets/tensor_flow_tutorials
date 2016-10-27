@@ -1,1 +1,20 @@
- 
+ \documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\author{Klim Zaporojets}
+\title{Notes on udacity deep learning course}
+\setlength\parindent{0pt}
+\begin{document}
+\section{ML For Beginners}
+softmax:
+\begin{enumerate}
+	\item If you want to assign probabilities to an object being one of several different things, softmax is the thing to do, because softmax gives us a list of values between 0 and 1 that add up to 1. Even later on, when we train more sophisticated models, the final step will be a layer of softmax.
+\end{enumerate}
+
+$$\text{softmax}(x)_i = \dfrac{\exp(x_i)}{\sum_j{\exp(x_j)}}$$
+
+
+
+\end{document}
