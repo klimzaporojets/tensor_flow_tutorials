@@ -26,8 +26,8 @@ from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 
 from tensorflow.examples.tutorials.mnist import input_data
-from tensorflow.examples.tutorials.mnist import mnist
-
+# from tensorflow.examples.tutorials.mnist import mnist
+import mnist as mnist
 
 # Basic model parameters as external flags.
 flags = tf.app.flags

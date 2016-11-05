@@ -3,6 +3,41 @@
 \usepackage{amsmath}
 \usepackage{amsfonts}
 \usepackage{amssymb}
+\usepackage{courier}
+\usepackage{listings}
+\usepackage{color}
+
+\definecolor{mygreen}{rgb}{0,0.6,0}
+\definecolor{mygray}{rgb}{0.5,0.5,0.5}
+\definecolor{mymauve}{rgb}{0.58,0,0.82}
+
+\lstset{ %
+  backgroundcolor=\color{white},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}; should come as last argument
+  basicstyle=\footnotesize,        % the size of the fonts that are used for the code
+  breakatwhitespace=false,         % sets if automatic breaks should only happen at whitespace
+  breaklines=true,                 % sets automatic line breaking
+  captionpos=b,                    % sets the caption-position to bottom
+  commentstyle=\color{mygreen},    % comment style
+  deletekeywords={...},            % if you want to delete keywords from the given language
+  escapeinside={\%*}{*)},          % if you want to add LaTeX within your code
+  extendedchars=true,              % lets you use non-ASCII characters; for 8-bits encodings only, does not work with UTF-8
+  frame=single,	                   % adds a frame around the code
+  keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)
+  keywordstyle=\color{blue},       % keyword style
+  language=python,                 % the language of the code
+  morekeywords={*,...},           % if you want to add more keywords to the set
+  numbers=left,                    % where to put the line-numbers; possible values are (none, left, right)
+  numbersep=5pt,                   % how far the line-numbers are from the code
+  numberstyle=\tiny\color{mygray}, % the style that is used for the line-numbers
+  rulecolor=\color{black},         % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
+  showspaces=false,                % show spaces everywhere adding particular underscores; it overrides 'showstringspaces'
+  showstringspaces=false,          % underline spaces within strings only
+  showtabs=false,                  % show tabs within strings adding particular underscores
+  stepnumber=2,                    % the step between two line-numbers. If it's 1, each line will be numbered
+  stringstyle=\color{mymauve},     % string literal style
+  tabsize=2,	                   % sets default tabsize to 2 spaces
+  title=\lstname                   % show the filename of files included with \lstinputlisting; also try caption instead of title
+}
 \author{Klim Zaporojets}
 \title{Notes on udacity deep learning course}
 \setlength\parindent{0pt}
@@ -15,7 +50,53 @@ softmax:
 
 $$\text{softmax}(x)_i = \dfrac{\exp(x_i)}{\sum_j{\exp(x_j)}}$$
 
-\section{Deep MNIST For experts}
+\section{Variables: Creation, Initialization, Saving, and Loading}
+When you train a model, you use variables to hold and update parameters. Variables are in-memory buffers containing tensors. They must be explicitly initialized and can be saved to disk during and after training. You can later restore saved values to exercise or analyze the model.
+\texttt{tf.Variable} is used to create variable. Initialization function should be provided (ex: \texttt{tf.random\_normal}) as well as the shape of the resulting tensor. 
+\begin{lstlisting}. Example: 
+# Create two variables.
+weights = tf.Variable(tf.random_normal([784, 200], stddev=0.35),
+                      name="weights")
+biases = tf.Variable(tf.zeros([200]), name``biases")
+\end{lstlisting}
+Variables can also be placed on a device: 
+\begin{lstlisting}. Example: 
+# Pin a variable to GPU.
+with tf.device(``/gpu:0"):
+  v = tf.Variable(...)
+\end{lstlisting} 
+In order to initialize variables \texttt{tf.initialize\_all\_variables()} has to be used to add op to run variables initializers on a particular session. \\
+Use \texttt{initialized\_value()} property to initialize a variable from the initial value of another variable. \\
+To save and restore variable values, \texttt{tf.train.Saver} object has to be used. This creates \textit{checkpoint files}. 
 
+\section{TensorBoard}
+The computations you'll use TensorFlow for - like training a massive deep neural network - can be complex and confusing. To make it easier to understand, debug, and optimize TensorFlow programs, we've included a suite of visualization tools called TensorBoard. You can use TensorBoard to visualize your TensorFlow graph, plot quantitative metrics about the execution of your graph, and show additional data like images that pass through it. \\
+In order to produce logs, the data for each of the summary stats has to be summarized via \texttt{SummaryWriter} and written to the disk to a particular location that will have to be passed to the parameter \texttt{logdir} when loading tensorboard. 
+
+To see different tensorboard  visualizations execute: \\ 
+\texttt{tensorboard --logdir=path/to/log-directory}
+
+\subsection{TensorBoard Graph visualization}
+In case of dealing with lots of nodes, scoping can be an interesting option: 
+\begin{lstlisting}. Example: 
+import tensorflow as tf
+
+with tf.name_scope('hidden') as scope:
+  a = tf.constant(5, name='alpha')
+  W = tf.Variable(tf.random_uniform([1, 2], -1.0, 1.0), name='weights')
+  b = tf.Variable(tf.zeros([1]), name='biases')
+  
+  \end{lstlisting} 
+\section{Tensorflow mechanics}
+Possible to save tensorflow checkpoints using \texttt{tf.train.Saver} class.\\
+\textbf{\texttt{tf.placeholder}}: inserts a placeholder for a tensor that will be always fed. 
+\begin{lstlisting}. Example: 
+images_placeholder = tf.placeholder(tf.float32, 
+	shape=(batch_size, mnist.IMAGE_PIXELS))
+labels_placeholder = tf.placeholder(tf.int32, shape=(batch_size))
+\end{lstlisting}
+Grouping nodes by name scopes is critical to making a legible graph. If you're building a model, name scopes give you control over the resulting visualization. \textbf{The better your name scopes, the better your visualization}.
+
+\section{Reading data}
 
 \end{document}

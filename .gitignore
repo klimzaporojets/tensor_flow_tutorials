@@ -3,3 +3,6 @@
 *.log
 *.pdf
 *.gz
+.idea
+*.pyc
+tensor_flow_101/data/
