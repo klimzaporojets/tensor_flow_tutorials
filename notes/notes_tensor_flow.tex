@@ -6,6 +6,13 @@
 \usepackage{courier}
 \usepackage{listings}
 \usepackage{color}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+}
 
 \definecolor{mygreen}{rgb}{0,0.6,0}
 \definecolor{mygray}{rgb}{0.5,0.5,0.5}
@@ -49,6 +56,34 @@ softmax:
 \end{enumerate}
 
 $$\text{softmax}(x)_i = \dfrac{\exp(x_i)}{\sum_j{\exp(x_j)}}$$
+
+\section{Get started - Basic Usage}
+TensorFlow is a programming system in which you represent computations as graphs. Nodes in the graph are called ops (short for operations). An op takes zero or more \texttt{Tensors}, performs some computation, and produces zero or more \texttt{Tensors}. A \texttt{Tensor} is a typed multi-dimensional array. For example, you can represent a mini-batch of images as a 4-D array of floating point numbers with dimensions [\texttt{batch}, \texttt{height}, \texttt{width}, \texttt{channels}].\\
+
+A TensorFlow graph is a description of computations. To compute anything, a graph must be launched in a \texttt{Session}. A \texttt{Session} places the graph ops onto \texttt{Devices}, such as CPUs or GPUs, and provides methods to execute them. These methods return tensors produced by ops as numpy \texttt{ndarray} objects in Python, and as \texttt{tensorflow::Tensor} instances in C and C++. \\
+
+The following are the main points to understand when executing TensorFlow is how TensorFlow: 
+\begin{enumerate}
+	\item Represents computations as graphs: TensorFlow programs are usually structured into a construction phase, that assembles a graph, and an execution phase that uses a session to execute ops in the graph. Example of building a graph: 
+	\begin{lstlisting}. Example: 
+import tensorflow as tf
+matrix1 = tf.constant([[3., 3.]])
+matrix2 = tf.constant([[2.],[2.]])
+product = tf.matmul(matrix1, matrix2)
+\end{lstlisting}
+The default graph now has three nodes: two \texttt{constant()} ops and one \texttt{matmul()} op. To actually multiply the matrices, and get the result of the multiplication, you must launch the graph in a session.
+	\item Executes graphs in the context of \texttt{Sessions}: to launch a graph, it is necessary to create a \texttt{Session} object. Without arguments the session constructor launches the default graph. To execute the graph for the example in the previous point, we can launch the following code: 
+	\begin{lstlisting}. Example: 
+sess = tf.Session()
+result = sess.run(product)
+print(result)
+sess.close()
+\end{lstlisting}
+	
+	\item Represents data as tensors. 
+	\item Maintains state with \texttt{Variables}. 
+	\item Uses feeds and fetches to get data into and out of arbitrary operations. 
+\end{enumerate}
 
 \section{Variables: Creation, Initialization, Saving, and Loading}
 When you train a model, you use variables to hold and update parameters. Variables are in-memory buffers containing tensors. They must be explicitly initialized and can be saved to disk during and after training. You can later restore saved values to exercise or analyze the model.
@@ -97,6 +132,76 @@ labels_placeholder = tf.placeholder(tf.int32, shape=(batch_size))
 \end{lstlisting}
 Grouping nodes by name scopes is critical to making a legible graph. If you're building a model, name scopes give you control over the resulting visualization. \textbf{The better your name scopes, the better your visualization}.
 
-\section{Reading data}
+\section{\href{www.tensorflow.org/versions/r0.11/how_tos/reading_data/index.html}{Reading data}}
+There are three main methods of getting data into a TensorFlow program: 
+\begin{enumerate}
+	\item \textbf{Feeding}: Python code provides the data when running each step. 
+	\item \textbf{Reading from files}: an input pipeline reads the data from files at the beginning of a TensorFlow graph. 
+	\item \textbf{Preloaded data}: a constant or variable in the TensorFlow graph holds all the data (for small data sets). 
+\end{enumerate}
+\subsection{Feeding}
+TensorFlow's feed mechanism lets you inject data into any Tensor in a computation graph. A python computation can thus feed data directly into the graph.\\
+Supply feed data through the \texttt{feed\_dict} argument to a run() or eval() call that initiates computation.
+\begin{lstlisting}. Example: 
+with tf.Session():
+  input = tf.placeholder(tf.float32)
+  classifier = ...
+  print(classifier.eval(feed_dict={input: my_python_preprocessing_fn()}))
+  \end{lstlisting}
 
+While you can replace any Tensor with feed data, including variables and constants, the best practice is to use a \texttt{\textbf{placeholder} op}  node. A placeholder exists solely to serve as the target of feeds. It is not initialized and contains no data.
+
+\subsection{Reading from files}
+A typical pipeline for reading records from files has the following stages:
+\begin{enumerate}
+	\item \textbf{The list of filenames}: achieved through \texttt{tf.train.string\_input\_producer} function. 
+	\item \textbf{Optional filename shuffling}: achieved through \texttt{tf.train.string\_input\_producer} function.
+	\item \textbf{Optional epoch limit}: achieved through \texttt{tf.train.string\_input\_producer} function.
+	\item \textbf{Filename queue}: achieved through \texttt{tf.train.string\_input\_producer} function.
+	\item \textbf{A Reader for the filename format}: Select the reader that matches your input file format and pass the filename queue to the reader's read method. The read method outputs a key identifying the file and record (useful for debugging if you have some weird records), and a scalar string value. Use one (or more) of the decoder and conversion ops to decode this string into the tensors that make up an example. For instance, to read text files in comma-separated value (CSV) format, use a \texttt{TextLineReader} with the \texttt{decode\_csv} operation. \\ 
+	Another approach is to convert whatever data you have into a supported format. This approach makes it easier to mix and match data sets and network architectures. The recommended format for TensorFlow is a \texttt{TFRecords} file. 
+	\item \textbf{A decoder for a record read by the reader}: 
+	\item \textbf{Optional preprocessing}: check \href{https://www.tensorflow.org/code/tensorflow/models/image/cifar10/cifar10_input.py}{this link} for an example. 
+	\item \textbf{Example queue}: the queues can be created using \texttt{tf.train.QueueRunner} class. For multi-threads queues, \texttt{tf.train.Coordinator} class should be used. 
+\end{enumerate}
+For \textbf{batching}, \texttt{tf.train.shuffle\_batch} function can be used. \\
+If you need more parallelism or shuffling of examples between files, use multiple reader instances using the \texttt{tf.train.shuffle\_batch\_join} function. This also can be achieved with \texttt{tf.train.shuffle\_batch} function with \texttt{num\_threads} parameter bigger than 1. The advantage is that this latter method allows to perform summaries on files reading by using \texttt{tf.train.shuffle\_batch*} functions. 
+\subsection{Preloaded data}
+This is only used for small data sets that can be loaded entirely in memory. There are two approaches: 
+\begin{enumerate}
+	\item Store the data in a constant. 
+	\item Store the data in a variable, that you initialize and then never change. 
+\end{enumerate}
+Using a constant is a bit simpler, but uses more memory (since the constant is stored inline in the graph data structure, which may be duplicated a few times).
+\subsection{Multiple input pipelines}
+The example in \href{https://www.tensorflow.org/versions/r0.11/tutorials/deep_cnn/index.html#save-and-restore-checkpoints}{this link} shows how to train on one dataset and evaluat (or ``eval") on another. One way to do this is to actually have two separate processes:
+\begin{enumerate}
+	\item The training process reads training input data and periodically writes checkpoint files with all the trained variables.
+	\item The evaluation process restores the checkpoint files into an inference model that reads validation input data.
+\end{enumerate}
+This has a couple of benefits: 
+\begin{enumerate}
+	\item The eval is performed on a single snapshot of the trained variables.
+	\item You can perform the eval even after training has completed and exited.
+\end{enumerate}
+You can have the train and eval in the same graph in the same process, and share their trained variables. See the \href{https://www.tensorflow.org/versions/r0.11/how_tos/variable_scope/index.html}{shared variables tutorial}.
+
+\subsection{Threading and Queues}
+The TensorFlow \texttt{Session} object is multithreaded, so multiple threads can easily use the same session and run ops in parallel. However, it is not always easy to implement a Python program that drives threads as described above. All threads must be able to stop together, exceptions must be caught and reported, and queues must be properly closed when stopping.
+
+TensorFlow provides two classes to help: \texttt{tf.Coordinator} and \texttt{tf.QueueRunner}. These two classes are designed to be used together. The \texttt{Coordinator} class helps multiple threads stop together and report exceptions to a program that waits for them to stop. The \texttt{QueueRunner} class is used to create a number of threads cooperating to enqueue tensors in the same queue.
+
+\subsubsection{Coordinator}
+The Coordinator class helps multiple threads stop together. Its key methods are: 
+\begin{enumerate}
+\item \texttt{should\_stop()}: returns True if the threads should stop. 
+\item \texttt{request\_stop(<exception>)}: requests that threads should stop. 
+\item \texttt{join(<list of threads>)}: waits until the specified threads have stopped. 
+\end{enumerate}
+\subsubsection{QueueRunner}
+The \texttt{QueueRunner} class creates a number of threads that repeatedly run an enqueue op. These threads can use a coordinator to stop together. In addition, a queue runner runs a closer thread that automatically closes the queue if an exception is reported to the coordinator.
+
+\subsubsection{Handling Exceptions}
+An important exception to get to know is \texttt{OutOfRangeError} which is used to report that a queue was closed. 
 \end{document}
+
