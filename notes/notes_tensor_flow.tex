@@ -77,10 +77,11 @@ The default graph now has three nodes: two \texttt{constant()} ops and one \text
 sess = tf.Session()
 result = sess.run(product)
 print(result)
-sess.close()
+sess.close() 
 \end{lstlisting}
 	
 	\item Represents data as tensors. 
+	%here more details about it 
 	\item Maintains state with \texttt{Variables}. 
 	\item Uses feeds and fetches to get data into and out of arbitrary operations. 
 \end{enumerate}
