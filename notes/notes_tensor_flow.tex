@@ -57,7 +57,8 @@ softmax:
 
 $$\text{softmax}(x)_i = \dfrac{\exp(x_i)}{\sum_j{\exp(x_j)}}$$
 
-\section{Get started - Basic Usage}
+\section{\href{www.tensorflow.org/versions/r0.11/get_started/basic_usage.html}{Get started - Basic Usage}}
+%\section{\href{www.tensorflow.org/versions/r0.11/how_tos/reading_data/index.html}{Reading data}}
 TensorFlow is a programming system in which you represent computations as graphs. Nodes in the graph are called ops (short for operations). An op takes zero or more \texttt{Tensors}, performs some computation, and produces zero or more \texttt{Tensors}. A \texttt{Tensor} is a typed multi-dimensional array. For example, you can represent a mini-batch of images as a 4-D array of floating point numbers with dimensions [\texttt{batch}, \texttt{height}, \texttt{width}, \texttt{channels}].\\
 
 A TensorFlow graph is a description of computations. To compute anything, a graph must be launched in a \texttt{Session}. A \texttt{Session} places the graph ops onto \texttt{Devices}, such as CPUs or GPUs, and provides methods to execute them. These methods return tensors produced by ops as numpy \texttt{ndarray} objects in Python, and as \texttt{tensorflow::Tensor} instances in C and C++. \\
@@ -79,21 +80,82 @@ result = sess.run(product)
 print(result)
 sess.close() 
 \end{lstlisting}
+	In case of having more than one GPU available on your machine, to use a GPU beyond the first you must assign ops to it explicitly. Use \texttt{with...Device} statements to specify which CPU or GPU to use for operations. For example: 
+	\begin{lstlisting}. Example: 
+with tf.Session() as sess:
+  with tf.device("/gpu:1"):
+    matrix1 = tf.constant([[3., 3.]])
+    matrix2 = tf.constant([[2.],[2.]])
+    product = tf.matmul(matrix1, matrix2)
+    ...
+\end{lstlisting}
+	Devices are specified with strings. The currently supported devices are: 
+	\begin{itemize}	
+		\item \texttt{"/cpu:0"}: The CPU of your machine. 
+		\item \texttt{"/gpu:0"}: The GPU of your machine, if you have one. 
+		\item \texttt{"/gpu:1"}: The second GPU of your machine, etc. 
+	\end{itemize}
 	
-	\item Represents data as tensors. 
+	To create a TensorFlow cluster, launch a TensorFlow server on each of the machines in the cluster. When you instantiate a Session in your client, you pass it the network location of one of the machines in the cluster:
+	\begin{lstlisting}. Example: 
+with tf.Session("grpc://example.org:2222") as sess:
+  # Calls to sess.run(...) will be executed on the cluster.
+  ...
+	\end{lstlisting}
+	This machine becomes the master for the session. The master distributes the graph across other machines in the cluster (workers), much as the local implementation distributes the graph across available compute resources within a machine.
+	You can use ``with tf.device():" statements to directly specify workers for particular parts of the graph:
+	\begin{lstlisting}. Example: 
+with tf.device("/job:ps/task:0"):
+  weights = tf.Variable(...)
+  biases = tf.Variable(...)
+  
+  	\end{lstlisting}
+The Python examples in the documentation launch the graph with a Session and use the Session.run() method to execute operations.\\
+For ease of use in interactive Python environments, such as IPython you can instead use the \texttt{InteractiveSession} class, and the \texttt{Tensor.eval()} and \texttt{Operation.run()} methods. This avoids having to keep a variable holding the session.
+	
+	\item Represents data as tensors: TensorFlow programs use a tensor data structure to represent all data -- only tensors are passed between operations in the computation graph. You can think of a TensorFlow tensor as an n-dimensional array or list. A tensor has a static type, a rank, and a shape. 
 	%here more details about it 
-	\item Maintains state with \texttt{Variables}. 
-	\item Uses feeds and fetches to get data into and out of arbitrary operations. 
-\end{enumerate}
+	\item Maintains state with \texttt{Variables}. Variables maintain state across executions of the graph. 
+	
+	\item Uses feeds and fetches to get data into and out of arbitrary operations. To fetch the outputs of operations, execute the graph with a \texttt{run()} call on the Session object and pass in the tensors to retrieve. The following is an example: 
+\begin{lstlisting}. Example: 
+input1 = tf.constant([3.0])
+input2 = tf.constant([2.0])
+input3 = tf.constant([5.0])
+intermed = tf.add(input2, input3)
+mul = tf.mul(input1, intermed)
 
+with tf.Session() as sess:
+  result = sess.run([mul, intermed])
+  print(result)
+
+# output:
+# [array([ 21.], dtype=float32), array([ 7.], dtype=float32)]
+\end{lstlisting}
+\end{enumerate}
+The examples above introduce tensors into the computation graph by storing them in \texttt{Constants} and \texttt{Variables}. TensorFlow also provides a feed mechanism for patching a tensor directly into any operation in the graph.\\
+A feed temporarily replaces the output of an operation with a tensor value. You supply feed data as an argument to a \texttt{run()} call. The feed is only used for the run call to which it is passed. The most common use case involves designating specific operations to be "feed" operations by using \texttt{tf.placeholder()} to create them:
+\begin{lstlisting}. Example: 
+input1 = tf.placeholder(tf.float32)
+input2 = tf.placeholder(tf.float32)
+output = tf.mul(input1, input2)
+
+with tf.Session() as sess:
+  print(sess.run([output], feed_dict={input1:[7.], input2:[2.]}))
+
+# output:
+# [array([ 14.], dtype=float32)]
+\end{lstlisting}
+A \texttt{placeholder()} operation generates an error if you do not supply a feed for it
 \section{Variables: Creation, Initialization, Saving, and Loading}
+
 When you train a model, you use variables to hold and update parameters. Variables are in-memory buffers containing tensors. They must be explicitly initialized and can be saved to disk during and after training. You can later restore saved values to exercise or analyze the model.
 \texttt{tf.Variable} is used to create variable. Initialization function should be provided (ex: \texttt{tf.random\_normal}) as well as the shape of the resulting tensor. 
 \begin{lstlisting}. Example: 
 # Create two variables.
 weights = tf.Variable(tf.random_normal([784, 200], stddev=0.35),
                       name="weights")
-biases = tf.Variable(tf.zeros([200]), name``biases")
+biases = tf.Variable(tf.zeros([200]), name=``biases")
 \end{lstlisting}
 Variables can also be placed on a device: 
 \begin{lstlisting}. Example: 
@@ -204,5 +266,42 @@ The \texttt{QueueRunner} class creates a number of threads that repeatedly run a
 
 \subsubsection{Handling Exceptions}
 An important exception to get to know is \texttt{OutOfRangeError} which is used to report that a queue was closed. 
-\end{document}
 
+\section{\href{www.tensorflow.org/versions/r0.11/how_tos/distributed/index.html}{Distributed TensorFlow}}
+The \texttt{tf.train.Server.create\_local\_server()} method creates a single-process cluster, with an in-process server:
+\begin{lstlisting}. Example: 
+# Start a TensorFlow server as a single-process "cluster".
+import tensorflow as tf
+c = tf.constant("Hello, distributed TensorFlow!")
+server = tf.train.Server.create_local_server()
+sess = tf.Session(server.target)  # Create a session on the server.
+sess.run(c)
+  \end{lstlisting}
+  
+\subsection{Create a cluster}  
+  A TensorFlow ``cluster" is a set of ``tasks" that participate in the distributed execution of a TensorFlow graph. Each task is associated with a TensorFlow ``server", which contains a ``master" that can be used to create sessions, and a ``worker" that executes operations in the graph. A cluster can also be divided into one or more ``jobs", where each job contains one or more tasks. \\
+  To create a cluster, you start one TensorFlow server per task in the cluster. Each task typically runs on a different machine, but you can run multiple tasks on the same machine (e.g. to control different GPU devices). In each task, do the following:
+\begin{itemize}
+	\item Create a \texttt{tf.train.ClusterSpec} that describes all of the tasks in the cluster. This should be the same for each task. Consists in a dictionary that maps job names to lists of network addresses. 
+	\item Create a \texttt{tf.train.Server}, passing the \texttt{tf.train.ClusterSpec} to the constructor, and identifying the local task with a job name and task index.
+	\item Finally, to place operations on a particular process, you can use the same \texttt{tf.device()} function that is used to specify whether ops run on the CPU or GPU. 
+
+\subsection{Replicated training}
+A common training configuration, called "data parallelism," involves multiple tasks in a \texttt{worker} job training the same model on different mini-batches of data, updating shared parameters hosted in a one or more tasks in a \texttt{ps} job. All tasks typically run on different machines. There are many ways to specify this structure in TensorFlow. Check online for more details about how to do it. 
+\end{itemize}
+
+\section{\href{www.tensorflow.org/versions/r0.11/how_tos/adding_an_op/index.html}{Adding a New Op}}
+The online version of this section has a lot of detailed information and code examples. Here I just describe what can be done. \\
+If you'd like to incorporate an operation that isn't covered by the existing library, you can create a custom Op. To incorporate your custom Op, you'll need to:
+\begin{itemize}
+	\item Register the new Op in a C++ file. The Op registration is independent of the implementation, and describes the semantics of how the Op is invoked. For example, it defines the Op name, and specifies its inputs and outputs. It also defines the shape function that is used for tensor shape inference.
+	\item Implement the Op in C++. This implementation is called a "kernel", and there can be multiple kernels for different architectures (e.g. CPUs, GPUs) or input / output types.
+	\item Optionally, create a Python wrapper. This wrapper is the public API to create the Op. A default wrapper is generated from the Op registration, which can be used directly or added to.
+	\item Optionally, write a function to compute gradients for the Op.
+	\item Test the Op, typically in Python. If you define gradients, you can verify them with the Python \texttt{GradientChecker}.
+\end{itemize}
+
+\section{Custom Data Readers}
+%TODO: we are here 
+
+\end{document}
