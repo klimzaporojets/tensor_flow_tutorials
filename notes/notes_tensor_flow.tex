@@ -301,7 +301,105 @@ If you'd like to incorporate an operation that isn't covered by the existing lib
 	\item Test the Op, typically in Python. If you define gradients, you can verify them with the Python \texttt{GradientChecker}.
 \end{itemize}
 
-\section{Custom Data Readers}
+\section{\href{www.tensorflow.org/versions/r0.11/how_tos/new_data_formats/index.html}{Custom Data Readers}}
+TensorFlow allows to write personalized readers to read data from unknown formats. These readers can be written in C++ and registered to be used in python. For more details and examples of code, read online. 
 %TODO: we are here 
 
+\section{\href{www.tensorflow.org/versions/r0.11/how_tos/using_gpu/index.html}{Using GPUs}}
+On a typical system, there are multiple computing devices. In TensorFlow, the supported device types are \texttt{CPU} and \texttt{GPU}. They are represented as \texttt{strings}. For example:
+\begin{itemize}
+	\item \texttt{"/cpu:0"}: The CPU of your machine. 
+	\item \texttt{"/gpu:0"}: The GPU of your machine, if you have one. 
+	\item \texttt{"/gpu:1"}: The second GPU of your machine, etc. 
+\end{itemize}
+If a TensorFlow operation has both CPU and GPU implementations, the GPU devices will be given priority when the operation is assigned to a device. For example, \texttt{matmul} has both CPU and GPU kernels. On a system with devices \texttt{cpu:0} and \texttt{gpu:0}, \texttt{gpu:0} will be selected to run \texttt{matmul}.
+
+To find out which devices your operations and tensors are assigned to, create the session with \texttt{log\_device\_placement} configuration option set to \texttt{True}.
+\begin{lstlisting}. Example2: 
+# Creates a graph.
+a = tf.constant([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=[2, 3], name='a')
+b = tf.constant([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=[3, 2], name='b')
+c = tf.matmul(a, b)
+# Creates a session with log_device_placement set to True.
+sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
+# Runs the op.
+print sess.run(c)
+  \end{lstlisting}
+If you would like a particular operation to run on a device of your choice instead of what's automatically selected for you, you can use with \texttt{tf.device} to create a device context such that all the operations within that context will have the same device assignment: 
+\begin{lstlisting}. Example: 
+# Creates a graph.
+with tf.device('/cpu:0'):
+  a = tf.constant([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=[2, 3], name='a')
+  b = tf.constant([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=[3, 2], name='b')
+  c = tf.matmul(a, b)
+# Creates a session with log_device_placement set to True.
+sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
+# Runs the op.
+print sess.run(c)
+  \end{lstlisting}
+
+Different GPU memory allocations methods exist, those can be configured inside \texttt{config.gpu\_options}. \\
+If you would like to run TensorFlow on multiple GPUs, you can construct your model in a multi-tower ffashion where each tower is assigned to a different GPU. For example: 
+\begin{lstlisting}. Example: 
+# Creates a graph.
+c = []
+for d in ['/gpu:2', '/gpu:3']:
+  with tf.device(d):
+    a = tf.constant([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=[2, 3])
+    b = tf.constant([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=[3, 2])
+    c.append(tf.matmul(a, b))
+with tf.device('/cpu:0'):
+  sum = tf.add_n(c)
+# Creates a session with log_device_placement set to True.
+sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
+# Runs the op.
+print sess.run(sum)
+  \end{lstlisting}
+The \href{https://www.tensorflow.org/versions/r0.11/tutorials/deep_cnn/index.html}{cifrar10 tutorial} is a good example demonstrating how to do training with multiple GPUs. 
+
+\section{\href{www.tensorflow.org/versions/r0.11/how_tos/variable_scope/index.html}{Sharing Variables}}
+When building complex models you often need to share large sets of variables and you might want to initialize all of them in one place. The following two methods are being used: 
+\begin{itemize}
+	\item \texttt{tf.variable\_scope(<name>, <shape>, <initializer>)}: creates or returns a variable with a given name.
+	\item \texttt{tf.get\_variable(<scope\_name>))}: manages namespaces for names passed to \texttt{tf.get\_variable()}. 
+\end{itemize}
+The function \texttt{tf.get\_variable()} is used to get or create variable instead of a direct call to \texttt{tf.Variable}. It uses an initializer instead of passing the value directly, as in \texttt{tf.Variable}. Several initializers are available inside \texttt{tf} package and can be read online. \\
+In order to re-use variables in different scopes (ex: for different network layers), \texttt{tf.variable\_scope()} should be used. Example: 
+\begin{lstlisting}. Example: 
+def conv_relu(input, kernel_shape, bias_shape):
+    # Create variable named "weights".
+    weights = tf.get_variable("weights", kernel_shape,
+        initializer=tf.random_normal_initializer())
+    # Create variable named "biases".
+    biases = tf.get_variable("biases", bias_shape,
+        initializer=tf.constant_initializer(0.0))
+    conv = tf.nn.conv2d(input, weights,
+        strides=[1, 1, 1, 1], padding='SAME')
+    return tf.nn.relu(conv + biases)
+    
+def my_image_filter(input_images):
+    with tf.variable_scope("conv1"):
+        # Variables created here will be named "conv1/weights", "conv1/biases".
+        relu1 = conv_relu(input_images, [5, 5, 32, 32], [32])
+    with tf.variable_scope("conv2"):
+        # Variables created here will be named "conv2/weights", "conv2/biases".
+        return conv_relu(relu1, [5, 5, 32, 32], [32])   
+  \end{lstlisting}
+  Much more options on variables scopes and re-usability are available and can be read online. Some of the following are the examples to check the code: 
+  \begin{itemize}
+  	\item \texttt{models/image/cifrar10.py}: model for detecting object in images. 
+  	\item \texttt{models/rnn/rnn\_cell.py}: cell functions for recurrent neural networks. 
+  	\item \texttt{models/rnn/seq2seq.py}: functions for building sequence-to-sequence models. 
+  \end{itemize}
+  
+  \section{\href{www.tensorflow.org/versions/r0.11/how_tos/hadoop/index.html}{How to run TensorFlow on Hadoop}}
+  Basically, it is possible to use HDFS with TensorFlow by changing paths that are used to read and write data to an HDFS path by using \texttt{tf.train.string\_input\_producer}. 
+  
+  \section{\href{www.tensorflow.org/versions/r0.11/how_tos/language_bindings/index.html}{TensorFlow in other languages}}
+  Python was the first client language supported by TensorFlow and currently supports the most features. More and more of that functionality is being moved into the core of TensorFlow (implemented in C++) and exposed via a \href{https://www.tensorflow.org/code/tensorflow/c/c_api.h}{C API}. Client languages should use the language's \href{https://en.wikipedia.org/wiki/Foreign_function_interface}{foreign function interface (FFI)} ti call into this C API to provide TensorFlow functionality. \\ 
+  Providing TensorFlow functionality in a programming language can be broken down into broad categories: 
+  \begin{itemize}
+  	\item \textbf{Run a predefined graph}: Given a \texttt{GraphDEf} (or \texttt{MetaGraphDef}) protocol message, be able to create a session, run queries, and get tensor results. This is sufficient for a mobile app or server that wants to run inference on a pre-trained model. 
+  	\item \textbf{Graph construction}: 
+  \end{itemize}
 \end{document}
