@@ -5,4 +5,6 @@
 *.gz
 .idea
 *.pyc
+*.out
+.DS_Store
 tensor_flow_101/data/

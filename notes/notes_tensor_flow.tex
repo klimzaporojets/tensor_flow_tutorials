@@ -7,6 +7,7 @@
 \usepackage{listings}
 \usepackage{color}
 \usepackage{hyperref}
+\usepackage{tabularx}
 \hypersetup{
     colorlinks=true,
     linkcolor=blue,
@@ -400,6 +401,33 @@ def my_image_filter(input_images):
   Providing TensorFlow functionality in a programming language can be broken down into broad categories: 
   \begin{itemize}
   	\item \textbf{Run a predefined graph}: Given a \texttt{GraphDEf} (or \texttt{MetaGraphDef}) protocol message, be able to create a session, run queries, and get tensor results. This is sufficient for a mobile app or server that wants to run inference on a pre-trained model. 
-  	\item \textbf{Graph construction}: 
+  	\item \textbf{Graph construction}: At least one function per defined TensorFlow op that adds an operation to the graph. Ideally these functions would be automatically generated so they stay in sync as the op definitions are modified.
+  	\item \textbf{Gradients (AKA automatic differentiation)}: Given a graph and a list of input and output operations, add operations to the graph that compute the partial derivatives (gradients) of the inputs with respect to the outputs. Allows for customization of the gradient function for a particular operation in the graph.  
+  	\item \textbf{Functions}: Define a subgraph that may be called in multiple places in the main \texttt{GraphDef}. Defines a \texttt{FunctionDef} in the \texttt{FunctionDefLibrary} included in a \texttt{GraphDef}.
+  	\item \textbf{Control Flow}: Construct ``If" and ``While" with user-specified subgraphs. Ideally these work with gradients (see above).
+  	\item \textbf{Neural Network library}: A number of components that together support the creation of neural network models and training them (possibly in a distributed setting). While it would be convenient to have this available in other languages, there are currently no plans to support this in languages other than Python. These libraries are typically wrappers over the features described above.
   \end{itemize}
+At a minimum, a language binding should support running a predefined graph, but most should also support graph construction. The TensorFlow Python API provides all these features.
+The following is a summary comparing main packages from \href{https://www.tensorflow.org/code/tensorflow/c/c_api.h}{C API} vs Python \\
+\begin{tabular}{|p{3cm}|p{6cm}|p{5cm}|}
+  \hline 
+  \textbf{Feature} & \textbf{Python} & \textbf{C} \\ 
+  \hline 
+  Run a predefined Graph & \texttt{tf.import\_graph\_def, tf.Session} & \texttt{TF\_GraphImportGraphDef}, \texttt{TF\_NewSessionWithGraph} \\ 
+  \hline 
+  Graph construction with generated op functions & Yes & Yes \\ 
+  \hline 
+  Gradients & \texttt{tf.gradients} & \  \\ 
+  \hline 
+  Functions & \texttt{tf.python.framework. function.Defun} & \ \\ 
+  \hline 
+  Control Flow & \texttt{tf.cond, tf.while\_loop} & \ \\ 
+  \hline 
+  Neural Network library & \texttt{tf.train, tf.nn, tf.contrib.layers, tf.contrib.slim} & \ \\ 
+  \hline 
+  \end{tabular}   
+  
+\section{tf.contrib.learn}  
+TensorFlow’s high-level machine learning API (tf.contrib.learn) makes it easy to configure, train, and evaluate a variety of machine learning models.
+
 \end{document}
