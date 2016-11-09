@@ -427,7 +427,45 @@ The following is a summary comparing main packages from \href{https://www.tensor
   \hline 
   \end{tabular}   
   
-\section{tf.contrib.learn}  
-TensorFlow’s high-level machine learning API (tf.contrib.learn) makes it easy to configure, train, and evaluate a variety of machine learning models.
+\section{\href{https://www.tensorflow.org/versions/r0.11/tutorials/tflearn/index.html}{tf.contrib.learn}} 
+TensorFlow’s high-level machine learning API (tf.contrib.learn) makes it easy to configure, train, and evaluate a variety of machine learning models.\\
+For example, the class \texttt{tf.contrib.learn.DNNClassifier} can be used to construct easily deep learning models with only writing a couple of lines of code, such as can be seen in the example online. 
+
+\subsection{\href{www.tensorflow.org/versions/r0.11/tutorials/linear/overview.html}{Large-scale Linear Models with TensorFlow}}
+Much of the work of designing a linear model consists of transforming raw data into suitable input features. tf.learn uses the \texttt{FeatureColumn} abstraction to enable these transformations. \\
+A \texttt{FeatureColumn} represents a single feature in your data. A \texttt{FeatureColumn} may represent a quantity like 'height', or it may represent a category like 'eye\_color' where the value is drawn from a set of discrete possibilities like {'blue', 'brown', 'green'}. \\
+\texttt{FreatureColumn} also handles good the conversion of categorical values into vectors (sparse columns), with code like this: 
+\begin{lstlisting}. Example: 
+eye_color = tf.contrib.layers.sparse_column_with_keys(
+  column_name="eye_color", keys=["blue", "brown", "green"])   
+\end{lstlisting}
+
+\texttt{FreatureColumn} for categorical features for which you don't know all possible values also can be implemented as follows using \texttt{sparse\_column\_with\_hash\_bucket()}:
+\begin{lstlisting}. Example: 
+education = tf.contrib.layers.sparse_column_with_hash_bucket(\
+    "education", hash_bucket_size=1000) 
+\end{lstlisting}
+
+If two features interact, \texttt{crossed\_column()} function can also be invoked in order to detect such crosses. 
+
+Continuous features can be specified as follows: 
+\begin{lstlisting}. Example: 
+age = tf.contrib.layers.real_valued_column("age")
+\end{lstlisting}
+\textit{Bucketization}(turning continuous column into a categorical column) is also possible. This transformation lets you use continuous features in feature crosses, or learn cases where specific value ranges have particular importance. 
+\begin{lstlisting}. Example: 
+age_buckets = tf.contrib.layers.bucketized_column(
+    age, boundaries=[18, 25, 30, 35, 40, 45, 50, 55, 60, 65])
+\end{lstlisting}
+In order to perform linear estimations, tf.learn's estimator classes provide a unified training and evaluation harness for regression and classification models. \\
+To build a linear estimator, you can use either the \texttt{tf.contrib.learn.LinearClassifier} estimator or the \texttt{tf.contrib.learn.LinearRegressor} estimator, for classification and regression respectively. \\
+As with all tf.learn estimators, to run the estimator you just: 
+\begin{enumerate}
+	\item Instantiate the estimator class. For the two linear estimator classes, you pass a list of \texttt{FeatureColumn}s to the constructor. 
+	\item Call the estimator's \texttt{fit()} method to train it. 
+	\item Call the estimator's \texttt{evaluate()} method to see how it does. 
+\end{enumerate}
+
+The tf.learn API also provides an estimator class that lets you jointly train a linear model and a deep neural network. This novel approach combines the ability of linear models to ``memorize" key features with the generalization ability of neural nets. This usually is called \textbf{wide and deep learning}. The class \texttt{tf.contrib.learn.DNNLinearCombinedClassifier} is used to create this sort of ``wide and deep" models. 
 
 \end{document}
